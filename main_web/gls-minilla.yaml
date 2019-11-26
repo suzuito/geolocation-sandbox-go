@@ -1,0 +1,5 @@
+runtime: go112
+manual_scaling:
+  instances: 1
+service: default
+instance_class: B1
