@@ -27,6 +27,7 @@ const (
 type Client interface {
 	PutLocations(ctx context.Context, userID string, locations []*model.Location) store.Error
 	GetLocations(ctx context.Context, userID string, partition string, locations *[]model.Location) store.Error
+	GetUserLocationsPartitions(ctx context.Context, userID string, partitions *[]string) store.Error
 	Close() store.Error
 }
 
@@ -74,6 +75,22 @@ func (c *ClientImpl) GetLocations(ctx context.Context, userID string, partition 
 			return store.NewErrorImpl(err)
 		}
 		*locations = append(*locations, location)
+	}
+	return nil
+}
+
+// GetUserLocationsPartitions ...
+func (c *ClientImpl) GetUserLocationsPartitions(ctx context.Context, userID string, partitions *[]string) store.Error {
+	iter := c.cli.Collection(NameUsers).Doc(userID).Collection(NameLocations).DocumentRefs(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return store.NewErrorImpl(err)
+		}
+		*partitions = append(*partitions, doc.ID)
 	}
 	return nil
 }
