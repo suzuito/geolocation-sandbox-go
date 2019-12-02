@@ -43,6 +43,6 @@ func main() {
 	root := gin.Default()
 	root.POST("/beacon", router.PostBeaconLocation(&app))
 	root.GET("/locations/partitions/:partition", router.GetUserLocationsPartitions(&app))
-	root.GET("/locations/latest", router.GetUserLocationsLatest(&app))
+	root.GET("/locations", router.GetUserLocations(&app))
 	root.Run()
 }

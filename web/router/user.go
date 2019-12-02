@@ -15,18 +15,19 @@ func GetUserLocationsPartitions(app web.Application) func(ctx *gin.Context) {
 			responseError(ctx, err)
 			return
 		}
-		locations := []model.Location{}
+		locations := []*model.Location{}
 		if err := cli.GetLocations(ctx, "dummyUser", partition, &locations); err != nil {
 			responseError(ctx, web.FromStoreError(err))
 			return
 		}
-		ctx.JSON(200, &locations)
+		ctx.JSON(200, newLocations(partition, locations))
 	}
 }
 
-// GetUserLocationsLatest ...
-func GetUserLocationsLatest(app web.Application) func(ctx *gin.Context) {
+// GetUserLocations ...
+func GetUserLocations(app web.Application) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
+		currentPartition := ctx.DefaultQuery("current", "")
 		cli, err := app.NewStoreCore(ctx)
 		if err != nil {
 			responseError(ctx, err)
@@ -41,12 +42,30 @@ func GetUserLocationsLatest(app web.Application) func(ctx *gin.Context) {
 			ctx.JSON(200, []string{})
 			return
 		}
-		partition := partitions[len(partitions)-1]
-		locations := []model.Location{}
+		partition := ""
+		if currentPartition == "" {
+			partition = partitions[len(partitions)-1]
+		} else {
+			j := -1
+			for i := range partitions {
+				if partitions[i] == currentPartition {
+					if i > 0 {
+						j = i - 1
+						break
+					}
+				}
+			}
+			if j < 0 {
+				ctx.JSON(200, []string{})
+				return
+			}
+			partition = partitions[j]
+		}
+		locations := []*model.Location{}
 		if err := cli.GetLocations(ctx, "dummyUser", partition, &locations); err != nil {
 			responseError(ctx, web.FromStoreError(err))
 			return
 		}
-		ctx.JSON(200, &locations)
+		ctx.JSON(200, newLocations(partition, locations))
 	}
 }
