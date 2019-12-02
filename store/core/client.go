@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -26,7 +27,8 @@ const (
 // Client ...
 type Client interface {
 	PutLocations(ctx context.Context, userID string, locations []*model.Location) store.Error
-	GetLocations(ctx context.Context, userID string, partition string, locations *[]model.Location) store.Error
+	GetLocations(ctx context.Context, userID string, partition string, locations *[]*model.Location) store.Error
+	GetUserLocationsPartitions(ctx context.Context, userID string, partitions *[]string) store.Error
 	Close() store.Error
 }
 
@@ -58,7 +60,7 @@ func (c *ClientImpl) PutLocations(ctx context.Context, userID string, locations 
 }
 
 // GetLocations ...
-func (c *ClientImpl) GetLocations(ctx context.Context, userID string, partition string, locations *[]model.Location) store.Error {
+func (c *ClientImpl) GetLocations(ctx context.Context, userID string, partition string, locations *[]*model.Location) store.Error {
 	partitionDoc := c.cli.Collection(NameUsers).Doc(userID).Collection(NameLocations).Doc(partition)
 	it := partitionDoc.Collection(NameDatas).Documents(ctx)
 	for {
@@ -73,8 +75,25 @@ func (c *ClientImpl) GetLocations(ctx context.Context, userID string, partition 
 		if err := doc.DataTo(&location); err != nil {
 			return store.NewErrorImpl(err)
 		}
-		*locations = append(*locations, location)
+		*locations = append(*locations, &location)
 	}
+	return nil
+}
+
+// GetUserLocationsPartitions ...
+func (c *ClientImpl) GetUserLocationsPartitions(ctx context.Context, userID string, partitions *[]string) store.Error {
+	iter := c.cli.Collection(NameUsers).Doc(userID).Collection(NameLocations).DocumentRefs(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return store.NewErrorImpl(err)
+		}
+		*partitions = append(*partitions, doc.ID)
+	}
+	sort.Strings(*partitions)
 	return nil
 }
 
